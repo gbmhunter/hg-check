@@ -4,8 +4,8 @@ hg-check
 
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
-- Last Modified: 2013/12/10
-- Version: v1.0.0.1
+- Last Modified: 2014/03/25
+- Version: v2.0.0.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -58,6 +58,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.0.0.0 2014/03/25 PowerShell program now checks for repos which need pulling, closes #1. Added a progress bar to provide feedback to the user, closes #3. Fixed path finding code, correct path (the script path) is now found no matter how the script is run, closes #2.
 v1.0.0.1 2013/12/10 Added info to the README about individual script files.
 v1.0.0.0 2013/12/09 Initial commit. Three script files (batch, Powershell, and bash scripts) added to './src/'.
 ======== ========== ============================================================================================================
