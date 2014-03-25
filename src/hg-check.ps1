@@ -59,7 +59,7 @@ function Go() {
 	write-progress -activity "Searching for repos." -status "Folders Checked = 0" -percentcomplete $progress;
 	
 	# The number of different operations that are performed on the repo
-	$numberOfSections = 3
+	$numberOfSections = 4
 	
 	$numberOfRepos = 0
 	
@@ -87,45 +87,33 @@ function Go() {
 			}
 		}
 		$numFoldersChecked += 1
-		write-progress -activity "Searching for repos." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
+		write-progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
 	}
 	
 	"Number of repos found = " + $numberOfRepos
 	""
-	$progress += 10
 	
 	# Calculate the amount of progress that is done per single operation
 	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
 
+	# Iterate through every found repo
 	foreach ($i in $repoPathA) {
 		
 		cd $i
+	
+		$uncommitedChanges = $false
 	
 		# Check to see if repos have uncommited changes
 		$a = hg id
 		if($a -match [regex]::Escape("`+"))
 		{
 			$i + " has uncommited changes"
+			$uncommitedChanges = $true
 		}
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted, unpushed, and unpulled changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
-	
-		# Check to see if repos have unpushed commits
-		$a = hg outgoing -v
-		#"Text is " + $a
-		if($a -match [regex]::Escape("no changes found"))
-		{
-			# Do nothing, no changes were found
-		}
-		else
-		{
-			$i + " has unpushed commits."
-		}
-		
-		$progress = $progress + $progressPerOperation
-		$roundedProgress = [Math]::Round($progress, 0)		
+		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;			
 	
 		# Check to see if repos have unpulled commits
 		$a = hg incoming
@@ -136,11 +124,56 @@ function Go() {
 		}
 		else
 		{
-			$i + " has unpulled commits."
+			$i + " has unpulled commits, pulling now..."
+			hg pull
 		}
-		cd ..
+		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
+		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;	
+		
+		# Only check for updates/update if there are no uncomitted changes
+		if($uncommitedChanges -eq $false)
+		{
+			# Check to see if repo needs updating
+			$currentRev = hg id -i
+			$headRev = hg head --template "{node|short}\n"
+			
+			if($headRev -match [regex]::Escape($currentRev))
+			{
+				# Do nothing, working directory rev and head revision are the same
+			}
+			else
+			{
+				$i + " has unupdated changes, updating now..."
+				# The working directory rev and head revision are different, so update
+				hg update
+			}
+		}
+		
+		$progress = $progress + $progressPerOperation
+		$roundedProgress = [Math]::Round($progress, 0)
+		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		
+		# Check to see if repos have unpushed commits
+		$a = hg outgoing -v
+		#"Text is " + $a
+		if($a -match [regex]::Escape("no changes found"))
+		{
+			# Do nothing, no changes were found
+		}
+		else
+		{
+			$i + " has unpushed commits, pushing now..."
+			hg push
+		}
+		
+		$progress = $progress + $progressPerOperation
+		$roundedProgress = [Math]::Round($progress, 0)
+		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		
+		cd ..
+		
 	}
 }
 
