@@ -24,6 +24,30 @@ function GetScriptDirectory
     }
 }
 
+function CheckIfFolderIsRepoRoot([string]$path)
+{
+	cd $path
+	
+	# Following command returns the path of the root repo folder, if current path is part of a repo
+	# Also, suppress errors
+	$a = hg --cwd . root 2>$null
+	
+	$compareResult = $path.CompareTo($a)
+	if($compareResult -eq 0)
+	{
+		# Repo has been found
+		cd ..
+		return $true
+	}
+	else
+	{
+		# Not a repo folder
+		cd ..
+		return $false
+	}
+	
+}
+
 function Go() {
 
 	$path = GetScriptDirectory
@@ -32,36 +56,48 @@ function Go() {
 	$folder = $fc.getfolder($path)
 	
 	$progress = 0.0
-	write-progress -activity "Searching for uncomitted changes." -status "$progress% Complete:" -percentcomplete $progress;
+	write-progress -activity "Searching for repos." -status "$progress% Complete:" -percentcomplete $progress;
 	
 	# The number of different operations that are performed on the repo
 	$numberOfSections = 3
 	
 	$numberOfRepos = 0
+	
+	$repoPathA = @()
+	
 	# Count the number of repos (used for progress bar)
-	foreach ($i in $folder.subfolders) {
-		$numberOfRepos++
+	foreach ($subFolder in $folder.subfolders) {
+		
+		if(CheckIfFolderIsRepoRoot $subFolder.path -eq $true)
+		{
+			$repoPathA += $subFolder.path
+			$numberOfRepos++
+		}
 	}
 	
+	"Number of repos found = " + $numberOfRepos
+	""
+	$progress += 10
+	
 	# Calculate the amount of progress that is done per single operation
-	$progressPerOperation = 100.0 / $numberOfRepos / $numberOfSections
+	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
 
-	# Check to see if repos have uncommited changes
-	foreach ($i in $folder.subfolders) {
-		$a = hg id $i.path
+	foreach ($i in $repoPathA) {
+		
+		cd $i
+	
+		# Check to see if repos have uncommited changes
+		$a = hg id
 		if($a -match [regex]::Escape("`+"))
 		{
-			$i.path + " has uncommited changes"
+			$i + " has uncommited changes"
 		}
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
 		write-progress -activity "Searching for uncomitted changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
-	}
 	
-	# Check to see if repos have unpushed commits
-	foreach ($i in $folder.subfolders) {
-		cd $i.path
+		# Check to see if repos have unpushed commits
 		$a = hg outgoing -v
 		#"Text is " + $a
 		if($a -match [regex]::Escape("no changes found"))
@@ -70,18 +106,14 @@ function Go() {
 		}
 		else
 		{
-			$i.path + " has unpushed commits."
+			$i + " has unpushed commits."
 		}
-		cd ..
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
 		write-progress -activity "Searching for uncomitted changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
-	}
 	
-	# Check to see if repos have unpulled commits
-	foreach ($i in $folder.subfolders) {
-		cd $i.path
+		# Check to see if repos have unpulled commits
 		$a = hg incoming
 		#"Text is " + $a
 		if($a -match [regex]::Escape("no changes found"))
@@ -90,7 +122,7 @@ function Go() {
 		}
 		else
 		{
-			$i.path + " has unpulled commits."
+			$i + " has unpulled commits."
 		}
 		cd ..
 		$progress = $progress + $progressPerOperation
@@ -100,7 +132,6 @@ function Go() {
 }
 
 "Checking for uncommitted/unpushed repo changes in 1s"
-""
 Start-Sleep -s 1
 Go
 ""
