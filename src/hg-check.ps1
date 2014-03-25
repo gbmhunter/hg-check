@@ -56,7 +56,7 @@ function Go() {
 	$folder = $fc.getfolder($path)
 	
 	$progress = 0.0
-	write-progress -activity "Searching for repos." -status "$progress% Complete:" -percentcomplete $progress;
+	write-progress -activity "Searching for repos." -status "Folders Checked = 0" -percentcomplete $progress;
 	
 	# The number of different operations that are performed on the repo
 	$numberOfSections = 3
@@ -64,6 +64,8 @@ function Go() {
 	$numberOfRepos = 0
 	
 	$repoPathA = @()
+	
+	$numFoldersChecked = 0
 	
 	# Count the number of repos (used for progress bar)
 	foreach ($subFolder in $folder.subfolders) {
@@ -73,6 +75,19 @@ function Go() {
 			$repoPathA += $subFolder.path
 			$numberOfRepos++
 		}
+		else
+		{
+			# Check sub-folders
+			foreach ($subSubFolder in $subFolder.subfolders) {
+				if(CheckIfFolderIsRepoRoot $subSubFolder.path -eq $true)
+				{
+					$repoPathA += $subSubFolder.path
+					$numberOfRepos++
+				}
+			}
+		}
+		$numFoldersChecked += 1
+		write-progress -activity "Searching for repos." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
 	}
 	
 	"Number of repos found = " + $numberOfRepos
@@ -95,7 +110,7 @@ function Go() {
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		write-progress -activity "Searching for uncomitted, unpushed, and unpulled changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 	
 		# Check to see if repos have unpushed commits
 		$a = hg outgoing -v
@@ -110,8 +125,7 @@ function Go() {
 		}
 		
 		$progress = $progress + $progressPerOperation
-		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		$roundedProgress = [Math]::Round($progress, 0)		
 	
 		# Check to see if repos have unpulled commits
 		$a = hg incoming
@@ -127,7 +141,6 @@ function Go() {
 		cd ..
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 	}
 }
 

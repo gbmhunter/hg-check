@@ -5,7 +5,7 @@ hg-check
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
 - Last Modified: 2014/03/25
-- Version: v2.1.0.0
+- Version: v2.1.1.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -58,6 +58,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.1.1.0 2014/03/25 PowerShell script now checks sub-subfolders for repos if none found in subfolder, closes #5.
 v2.1.0.0 2014/03/25 PowerShell script now ignores folders which are not Mercurial repos, closes #4. Script also reports back how many repos where discovered.
 v2.0.0.0 2014/03/25 PowerShell program now checks for repos which need pulling, closes #1. Added a progress bar to provide feedback to the user, closes #3. Fixed path finding code, correct path (the script path) is now found no matter how the script is run, closes #2.
 v1.0.0.1 2013/12/10 Added info to the README about individual script files.
