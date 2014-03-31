@@ -66,7 +66,23 @@ function Go() {
 	$repoPathA = @()
 	
 	$numFoldersChecked = 0
-	$numOfMergeCommits = 0;
+	
+	#============ STATISTICS VARIABLES ==============#
+	
+	# Keeps track of how many repos where skipped
+	$numReposSkipped = 0
+	
+	# Keeps track of how many repos where pulled
+	$numReposPulled = 0	
+	
+	# Keeps track of how many repos where merged
+	$numReposMerged = 0
+	
+	# Keeps track of how many repos where updated
+	$numReposUpdated = 0
+	
+	# Keeps track of how many repos where pushed
+	$numReposPushed = 0
 	
 	# Count the number of repos (used for progress bar)
 	foreach ($subFolder in $folder.subfolders) {
@@ -91,10 +107,18 @@ function Go() {
 		write-progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
 	}
 	
-	"Number of repos found = " + $numberOfRepos
 	
 	"Reading repo-ignore.txt"
-	$repoToIgnoreA = Get-Content .\repo-ignore.txt
+	try
+	{
+		$repoToIgnoreA = Get-Content .\repo-ignore.txt -ea "stop"
+	}
+	catch
+	{
+		"ERROR: repo-ignore.txt not found."
+		# Exit program!
+		return
+	}
 	
 	# Calculate the amount of progress that is done per single operation
 	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
@@ -120,7 +144,7 @@ function Go() {
 		if($shouldQuit -eq $true)
 		{
 			# We should ignore this repo, so skip to the next one
-			"Ignoring " + $i
+			$numReposSkipped++
 			continue
 		}
 		
@@ -152,6 +176,7 @@ function Go() {
 		{
 			$i + " has unpulled commits, pulling now..."
 			hg pull
+			$numReposPulled++
 		}
 		
 		$progress = $progress + $progressPerOperation
@@ -174,6 +199,7 @@ function Go() {
 				$i + " has unupdated changes, updating now..."
 				# The working directory rev and head revision are different, so update
 				hg update
+				$numReposUpdated++
 			}
 			
 			# We need to check here whether merge on default branch is required
@@ -192,7 +218,7 @@ function Go() {
 					# Perform a simple merge-caused commit after merging
 					"Commiting..."
 					hg commit -m "Merge."
-					$numOfMergeCommits++
+					$numOfReposMerged++
 				}
 				else
 				{
@@ -216,18 +242,32 @@ function Go() {
 		{
 			$i + " has unpushed commits, pushing now..."
 			hg push
+			$numReposPushed++
 		}
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
 		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 		
+		# Exit the repo directory
 		cd ..
 		
 	}
 	
-	# Print warnings
-	write-host $warningString -foreground "red" -background "black"
+	# Print status
+	write-host "Num. repos found: $numberOfRepos" 
+	write-host "Num. repos skipped: $numReposSkipped"
+	write-host "Num. repos pulled: $numReposPulled"
+	write-host "Num. repos updated: $numReposUpdated" 
+	write-host "Num. repos merged: $numReposMerged" 
+	write-host "Num. repos pushed: $numReposPushed"
+	
+	# Print warnings (if they exist)
+	if([bool]$warningString -eq $false)
+	{		
+		write-host "WARNINGS:" -foreground "red" -background "black"	
+		write-host $warningString -foreground "red" -background "black"
+	}
 }
 
 "Checking for uncommitted/unpushed repo changes in 1s"
