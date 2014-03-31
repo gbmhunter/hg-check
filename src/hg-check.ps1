@@ -66,6 +66,7 @@ function Go() {
 	$repoPathA = @()
 	
 	$numFoldersChecked = 0
+	$numOfMergeCommits = 0;
 	
 	# Count the number of repos (used for progress bar)
 	foreach ($subFolder in $folder.subfolders) {
@@ -96,18 +97,22 @@ function Go() {
 	# Calculate the amount of progress that is done per single operation
 	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
 
+	# Used to build up warning string that will displayed at the end of the function
+	# Create some initial space from preceding text
+	$warningString = "`r`n"
+	
 	# Iterate through every found repo
 	foreach ($i in $repoPathA) {
 		
 		cd $i
 	
-		$uncommitedChanges = $false
+		$uncommitedChanges = $false	
 	
 		# Check to see if repos have uncommited changes
 		$a = hg id
 		if($a -match [regex]::Escape("`+"))
 		{
-			$i + " has uncommited changes"
+			$warningString += $i + " has uncommited changes.`r`n"
 			$uncommitedChanges = $true
 		}
 		
@@ -144,10 +149,34 @@ function Go() {
 				# Do nothing, working directory rev and head revision are the same
 			}
 			else
-			{
+			{			
 				$i + " has unupdated changes, updating now..."
 				# The working directory rev and head revision are different, so update
 				hg update
+			}
+			
+			# We need to check here whether merge on default branch is required
+			# Note that this only lists heads for the default branch
+			$hgHeadsResult = hg heads default --template "1"
+			if($hgHeadsResult.Length -eq 1)
+			{
+				
+			}
+			else
+			{
+				$i + " needs to be merged, has " + $hgHeadsResult.Length + " heads on default branch! Merging now..."
+				hg merge
+				if($LastExitCode -eq 0)
+				{
+					# Perform a simple merge-caused commit after merging
+					"Commiting..."
+					hg commit -m "Merge."
+					$numOfMergeCommits++
+				}
+				else
+				{
+					"Merge failed!"
+				}
 			}
 		}
 		
@@ -155,7 +184,7 @@ function Go() {
 		$roundedProgress = [Math]::Round($progress, 0)
 		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 		
-		# Check to see if repos have unpushed commits
+		# Finally, check to see if repos have unpushed commits
 		$a = hg outgoing -v
 		#"Text is " + $a
 		if($a -match [regex]::Escape("no changes found"))
@@ -175,6 +204,9 @@ function Go() {
 		cd ..
 		
 	}
+	
+	# Print warnings
+	write-host $warningString -foreground "red" -background "black"
 }
 
 "Checking for uncommitted/unpushed repo changes in 1s"
