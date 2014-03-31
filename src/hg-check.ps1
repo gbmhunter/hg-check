@@ -2,7 +2,7 @@
 # @file 				hg-check.ps1
 # @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.cladlab.com)
 # @created			2013/12/09
-# @last-modified 	2014/03/25
+# @last-modified 	2014/04/01
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
 #						See README.rst in root dir for more info.
@@ -92,7 +92,9 @@ function Go() {
 	}
 	
 	"Number of repos found = " + $numberOfRepos
-	""
+	
+	"Reading repo-ignore.txt"
+	$repoToIgnoreA = Get-Content .\repo-ignore.txt
 	
 	# Calculate the amount of progress that is done per single operation
 	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
@@ -103,7 +105,26 @@ function Go() {
 	
 	# Iterate through every found repo
 	foreach ($i in $repoPathA) {
+	
+		$shouldQuit = $false
 		
+		# First check if we should ignore it
+		foreach ($repoToIgnore in $repoToIgnoreA)
+		{
+			if($i.Equals($path + "\" + $repoToIgnore))
+			{
+				$shouldQuit = $true;
+			}
+		}
+		
+		if($shouldQuit -eq $true)
+		{
+			# We should ignore this repo, so skip to the next one
+			"Ignoring " + $i
+			continue
+		}
+		
+		# Go into the repos directory (useful for when calling hg commands)
 		cd $i
 	
 		$uncommitedChanges = $false	

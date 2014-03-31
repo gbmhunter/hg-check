@@ -4,8 +4,8 @@ hg-check
 
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
-- Last Modified: 2014/03/31
-- Version: v2.2.1.0
+- Last Modified: 2014/04/01
+- Version: v2.3.0.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -30,6 +30,8 @@ This repo has the following script files, each is an attempt to perform the same
 The PowerShell script is the most up-to-date and bug-free script. Remember that you must run (if you haven't already) `Set-ExecutionLevel Unrestricted` from PowerShell with admin privileges before the PowerShell script can be run.
 
 The PowerShell script will commit for you with the description "Merge", if it performs a simple merge with no conflicts.
+
+The PowerShell script also supports a repo-ignore.txt file in the same directory as the script. The script will ignore (not perform any changes to) any repos which are listed in this text file. List them by writing down the folder name the repo is in (one per line), relative to the folder that the script is in. 
 
 Internal Dependencies
 =====================
@@ -60,6 +62,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.3.0.0 2014/04/01 PowerShell script now reads repo-ignore.txt file (in the same directory as the script), and ignores any repos which are listed in the file, closes #14. Added info about this to README.
 v2.2.1.0 2014/03/31 PowerShell script now outputs warning messages at the end of program, closes #7. Warning messages are now red, closes #10. Added info to README about running `Set-ExecutionLevel Unrestricted` before PowerShell script can run, closes #9. PowerShell script now checks if merges are needed, and performs them, along with a commit, closes #13.
 v2.2.0.0 2014/03/25 PowerShell script now automatically pushes and pulls changes, closes #6. Also checks and runs hg update if needed.
 v2.1.1.0 2014/03/25 PowerShell script now checks sub-subfolders for repos if none found in subfolder, closes #5.
