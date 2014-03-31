@@ -104,20 +104,18 @@ function Go() {
 			}
 		}
 		$numFoldersChecked += 1
-		write-progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
+		Write-Progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
 	}
 	
-	
-	"Reading repo-ignore.txt"
+	Write-Host -NoNewLine "Reading repo-ignore.txt..."
 	try
 	{
 		$repoToIgnoreA = Get-Content .\repo-ignore.txt -ea "stop"
+		Write-Host "repo-ignore.txt found."
 	}
 	catch
 	{
-		"ERROR: repo-ignore.txt not found."
-		# Exit program!
-		return
+		Write-Host "repo-ignore.txt not found."	
 	}
 	
 	# Calculate the amount of progress that is done per single operation
@@ -125,7 +123,7 @@ function Go() {
 
 	# Used to build up warning string that will displayed at the end of the function
 	# Create some initial space from preceding text
-	$warningString = "`r`n"
+	$warningString = ""
 	
 	# Iterate through every found repo
 	foreach ($i in $repoPathA) {
@@ -263,9 +261,10 @@ function Go() {
 	write-host "Num. repos pushed: $numReposPushed"
 	
 	# Print warnings (if they exist)
-	if([bool]$warningString -eq $false)
+	if([bool]$warningString)
 	{		
-		write-host "WARNINGS:" -foreground "red" -background "black"	
+		write-host ""
+		write-host "WARNINGS:" -foreground "red" -background "black"			
 		write-host $warningString -foreground "red" -background "black"
 	}
 }
