@@ -4,8 +4,8 @@ hg-check
 
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
-- Last Modified: 2014/04/01
-- Version: v2.3.2.0
+- Last Modified: 2014/04/04
+- Version: v2.3.3.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -33,6 +33,8 @@ The PowerShell script will commit for you with the description "Merge", if it pe
 
 The PowerShell script also supports a repo-ignore.txt file in the same directory as the script. The script will ignore (not perform any changes to) any repos which are listed in this text file. List them by writing down the folder name the repo is in (one per line), relative to the folder that the script is in. 
 
+PowerShell must be v3.0 or higher, otherwise the script will give you errors when run.
+
 Internal Dependencies
 =====================
 
@@ -43,7 +45,7 @@ External Dependencies
 
 - Mercurial
 - Windows COMMAND.COM or cmd.exe (if using batch script)
-- Windows PowerShell (if using the PowerShell script)
+- Windows PowerShell v3.0 or higher (if using the PowerShell script)
 - Linux Bash Terminal (if using bash script)
 
 Issues
@@ -62,6 +64,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.3.3.0 2014/04/04 Renamed $i to $repoPath, closes #11. Script no longer prints -1 and path just after it starts, closes #20. Added note to README about requirement that PowerShell has to be v3.0 or higher, closes #19.
 v2.3.2.0 2014/04/01 Warnings in the PowerShell script are now being printed, closes #16. Script now continues if no repo-ignore.txt file is found, closes #17.
 v2.3.1.0 2014/04/01 Added statistic reporting to the end of the PowerShell script, closes #12. Wrapped repo-ignore.txt file read in a try/catch statement, closes #15.
 v2.3.0.0 2014/04/01 PowerShell script now reads repo-ignore.txt file (in the same directory as the script), and ignores any repos which are listed in the file, closes #14. Added info about this to README.

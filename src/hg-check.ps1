@@ -1,26 +1,27 @@
 #
 # @file 				hg-check.ps1
-# @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.cladlab.com)
+# @author 			Geoffrey Hunter <gbmhunter@gmail.com>
 # @created			2013/12/09
-# @last-modified 	2014/04/01
+# @last-modified 	2014/04/04
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
-#						See README.rst in root dir for more info.
+#	
 
 function GetScriptDirectory
 {
     $Invocation = (Get-Variable MyInvocation -Scope 1).Value;
+
     if($Invocation.PSScriptRoot)
     {
-        $Invocation.PSScriptRoot;
+        return $Invocation.PSScriptRoot;
     }
     Elseif($Invocation.MyCommand.Path)
     {
-        Split-Path $Invocation.MyCommand.Path
+        return Split-Path $Invocation.MyCommand.Path
     }
     else
     {
-        $Invocation.InvocationName.Substring(0,$Invocation.InvocationName.LastIndexOf("\"));
+        return $Invocation.InvocationName.Substring(0, $Invocation.InvocationName.LastIndexOf("\"));
     }
 }
 
@@ -126,14 +127,14 @@ function Go() {
 	$warningString = ""
 	
 	# Iterate through every found repo
-	foreach ($i in $repoPathA) {
+	foreach ($repoPath in $repoPathA) {
 	
 		$shouldQuit = $false
 		
 		# First check if we should ignore it
 		foreach ($repoToIgnore in $repoToIgnoreA)
 		{
-			if($i.Equals($path + "\" + $repoToIgnore))
+			if($repoPath.Equals($path + "\" + $repoToIgnore))
 			{
 				$shouldQuit = $true;
 			}
@@ -147,7 +148,7 @@ function Go() {
 		}
 		
 		# Go into the repos directory (useful for when calling hg commands)
-		cd $i
+		cd $repoPath
 	
 		$uncommitedChanges = $false	
 	
@@ -155,7 +156,7 @@ function Go() {
 		$a = hg id
 		if($a -match [regex]::Escape("`+"))
 		{
-			$warningString += $i + " has uncommited changes.`r`n"
+			$warningString += $repoPath + " has uncommited changes.`r`n"
 			$uncommitedChanges = $true
 		}
 		
@@ -172,7 +173,7 @@ function Go() {
 		}
 		else
 		{
-			$i + " has unpulled commits, pulling now..."
+			$repoPath + " has unpulled commits, pulling now..."
 			hg pull
 			$numReposPulled++
 		}
@@ -194,7 +195,7 @@ function Go() {
 			}
 			else
 			{			
-				$i + " has unupdated changes, updating now..."
+				$repoPath + " has unupdated changes, updating now..."
 				# The working directory rev and head revision are different, so update
 				hg update
 				$numReposUpdated++
@@ -209,7 +210,7 @@ function Go() {
 			}
 			else
 			{
-				$i + " needs to be merged, has " + $hgHeadsResult.Length + " heads on default branch! Merging now..."
+				$repoPath + " needs to be merged, has " + $hgHeadsResult.Length + " heads on default branch! Merging now..."
 				hg merge
 				if($LastExitCode -eq 0)
 				{
@@ -238,7 +239,7 @@ function Go() {
 		}
 		else
 		{
-			$i + " has unpushed commits, pushing now..."
+			$repoPath + " has unpushed commits, pushing now..."
 			hg push
 			$numReposPushed++
 		}
