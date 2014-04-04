@@ -1,6 +1,6 @@
 #
 # @file 				hg-check.ps1
-# @author 			Geoffrey Hunter <gbmhunter@gmail.com>
+# @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.clablab.com)
 # @created			2013/12/09
 # @last-modified 	2014/04/04
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
@@ -10,7 +10,6 @@
 function GetScriptDirectory
 {
     $Invocation = (Get-Variable MyInvocation -Scope 1).Value;
-
     if($Invocation.PSScriptRoot)
     {
         return $Invocation.PSScriptRoot;
@@ -51,13 +50,16 @@ function CheckIfFolderIsRepoRoot([string]$path)
 
 function Go() {
 
-	$path = GetScriptDirectory
+	$scriptPath = GetScriptDirectory
 
-	$fc = new-object -com scripting.filesystemobject
-	$folder = $fc.getfolder($path)
+	$fc = New-Object -com scripting.filesystemobject
+	$scriptFolder = $fc.getfolder($scriptPath)
+	
+	# Go up two levels, since this script is in it's own repo which has it's own folder and sub-folder
+	$projectFolder = $scriptFolder.ParentFolder.ParentFolder
 	
 	$progress = 0.0
-	write-progress -activity "Searching for repos." -status "Folders Checked = 0" -percentcomplete $progress;
+	Write-Progress -activity "Searching for repos." -status "Folders Checked = 0" -percentcomplete $progress;
 	
 	# The number of different operations that are performed on the repo
 	$numberOfSections = 4
@@ -76,6 +78,9 @@ function Go() {
 	# Keeps track of how many repos where pulled
 	$numReposPulled = 0	
 	
+	# Keeps track of how many repos have uncomitted changes
+	$numReposWithUncomittedChanges = 0
+	
 	# Keeps track of how many repos where merged
 	$numReposMerged = 0
 	
@@ -86,7 +91,7 @@ function Go() {
 	$numReposPushed = 0
 	
 	# Count the number of repos (used for progress bar)
-	foreach ($subFolder in $folder.subfolders) {
+	foreach ($subFolder in $projectFolder.subfolders) {
 		
 		if(CheckIfFolderIsRepoRoot $subFolder.path -eq $true)
 		{
@@ -108,10 +113,11 @@ function Go() {
 		Write-Progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
 	}
 	
-	Write-Host -NoNewLine "Reading repo-ignore.txt..."
+	$repoIgnoreFilePath = $projectFolder.path + "\repo-ignore.txt"
+	Write-Host -NoNewLine "Reading $repoIgnoreFilePath..."
 	try
 	{
-		$repoToIgnoreA = Get-Content .\repo-ignore.txt -ea "stop"
+		$repoToIgnoreA = Get-Content $repoIgnoreFilePath -ea "stop"
 		Write-Host "repo-ignore.txt found."
 	}
 	catch
@@ -126,15 +132,20 @@ function Go() {
 	# Create some initial space from preceding text
 	$warningString = ""
 	
+	$remoteRepoPathNotFoundWarnings = ""
+	
 	# Iterate through every found repo
 	foreach ($repoPath in $repoPathA) {
 	
 		$shouldQuit = $false
+		$remoteRepoFound = $false
 		
 		# First check if we should ignore it
 		foreach ($repoToIgnore in $repoToIgnoreA)
 		{
-			if($repoPath.Equals($path + "\" + $repoToIgnore))
+			#Write-Host "repoPath = $repoPath"
+			#Write-Host "repoToIgnore = $projectFolder.path + "\" + $repoToIgnore"
+			if($repoPath.Equals($projectFolder.path + "\" + $repoToIgnore))
 			{
 				$shouldQuit = $true;
 			}
@@ -153,26 +164,34 @@ function Go() {
 		$uncommitedChanges = $false	
 	
 		# Check to see if repos have uncommited changes
-		$a = hg id
-		if($a -match [regex]::Escape("`+"))
+		#$a = hg id
+		$a = hg status
+		if(![string]::IsNullOrEmpty($a))
 		{
 			$warningString += $repoPath + " has uncommited changes.`r`n"
 			$uncommitedChanges = $true
+			$numReposWithUncomittedChanges++
 		}
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;			
+		Write-Progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;			
 	
-		# Check to see if repos have unpulled commits
-		$a = hg incoming
-		#"Text is " + $a
-		if($a -match [regex]::Escape("no changes found"))
+		# Check to see if repos have unpulled commits, 
+		# redirect stderr to stdout so we can read it in $a
+		$a = hg incoming 2>&1
+		if($a -match [regex]::Escape("abort"))
+		{
+			$remoteRepoPathNotFoundWarnings += "Remote repo for $repoPath not found."
+		}
+		elseif($a -match [regex]::Escape("no changes found"))
 		{
 			# Do nothing, no changes were found
+			$remoteRepoFound = $true
 		}
 		else
 		{
+			$remoteRepoFound = $true
 			$repoPath + " has unpulled commits, pulling now..."
 			hg pull
 			$numReposPulled++
@@ -180,7 +199,7 @@ function Go() {
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;	
+		Write-Progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;	
 		
 		# Only check for updates/update if there are no uncomitted changes
 		if($uncommitedChanges -eq $false)
@@ -228,46 +247,69 @@ function Go() {
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		Write-Progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 		
-		# Finally, check to see if repos have unpushed commits
-		$a = hg outgoing -v
-		#"Text is " + $a
-		if($a -match [regex]::Escape("no changes found"))
+		# Finally, check to see if repos have unpushed commits,
+		# only if remote repo was found previously when hg incoming was called
+		if($remoteRepoFound -eq $true)
 		{
-			# Do nothing, no changes were found
-		}
-		else
-		{
-			$repoPath + " has unpushed commits, pushing now..."
-			hg push
-			$numReposPushed++
+		
+			$a = hg outgoing -v
+			#"Text is " + $a
+			if($a -match [regex]::Escape("no changes found"))
+			{
+				# Do nothing, no changes were found
+			}
+			else
+			{
+				$repoPath + " has unpushed commits, pushing now..."
+				hg push
+				$numReposPushed++
+			}
 		}
 		
 		$progress = $progress + $progressPerOperation
 		$roundedProgress = [Math]::Round($progress, 0)
-		write-progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
+		Write-Progress -activity "Searching for uncomitted, unpushed, unpulled, and unupdated changes." -status "$roundedProgress% Complete:" -percentcomplete $roundedProgress;
 		
 		# Exit the repo directory
 		cd ..
 		
+		# New line to seperate out repo-related output
+		#Write-Host ""
 	}
 	
-	# Print status
-	write-host "Num. repos found: $numberOfRepos" 
-	write-host "Num. repos skipped: $numReposSkipped"
-	write-host "Num. repos pulled: $numReposPulled"
-	write-host "Num. repos updated: $numReposUpdated" 
-	write-host "Num. repos merged: $numReposMerged" 
-	write-host "Num. repos pushed: $numReposPushed"
+	# Print statistics
+	Write-Host ""
+	Write-Host "STATISTICS:"
+	Write-Host "Num. repos found:                   $numberOfRepos" 
+	Write-Host "Num. repos skipped:                 $numReposSkipped"
+	Write-Host "Num. repos pulled:                  $numReposPulled"
+	Write-Host "Num. repos with uncomitted changes: $numReposWithUncomittedChanges"
+	Write-Host "Num. repos updated:                 $numReposUpdated" 
+	Write-Host "Num. repos merged:                  $numReposMerged" 
+	Write-Host "Num. repos pushed:                  $numReposPushed"
 	
 	# Print warnings (if they exist)
-	if([bool]$warningString)
-	{		
-		write-host ""
-		write-host "WARNINGS:" -foreground "red" -background "black"			
-		write-host $warningString -foreground "red" -background "black"
+	
+	if([bool]$warningString -or [bool]$remoteRepoPathNotFoundWarnings)
+	{
+		Write-Host ""
+		Write-Host "WARNINGS:" -foreground "red" -background "black"	
 	}
+	
+	if([bool]$warningString)
+	{			
+		Write-Host ""
+		Write-Host $warningString -foreground "red" -background "black"
+	}
+	
+	if([bool]$remoteRepoPathNotFoundWarnings)
+	{
+		Write-Host ""
+		Write-Host $remoteRepoPathNotFoundWarnings -foreground "red" -background "black"
+	}
+	
 }
 
 "Checking for uncommitted/unpushed repo changes in 1s"
