@@ -64,6 +64,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.4.1.0 2014/04/07 'Remote repo not found' messages now print on new lines in PowerShell script, closes #25.
 v2.4.0.0 2014/04/04 PowerShell script now correctly detects new files that have been put into a repo, closes #21. PowerShell script now outputs warnings at the bottom of script for remote repos which where not found, closes #23. Added statistic for the number of repos with uncomitted changes, closes #24.
 v2.3.3.0 2014/04/04 Renamed $i to $repoPath, closes #11. Script no longer prints -1 and path just after it starts, closes #20. Added note to README about requirement that PowerShell has to be v3.0 or higher, closes #19.
 v2.3.2.0 2014/04/01 Warnings in the PowerShell script are now being printed, closes #16. Script now continues if no repo-ignore.txt file is found, closes #17.

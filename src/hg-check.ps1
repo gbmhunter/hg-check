@@ -2,7 +2,7 @@
 # @file 				hg-check.ps1
 # @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.clablab.com)
 # @created			2013/12/09
-# @last-modified 	2014/04/04
+# @last-modified 	2014/04/07
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
 #	
@@ -182,7 +182,7 @@ function Go() {
 		$a = hg incoming 2>&1
 		if($a -match [regex]::Escape("abort"))
 		{
-			$remoteRepoPathNotFoundWarnings += "Remote repo for $repoPath not found."
+			$remoteRepoPathNotFoundWarnings += "Remote repo for $repoPath not found.`r`n"
 		}
 		elseif($a -match [regex]::Escape("no changes found"))
 		{
