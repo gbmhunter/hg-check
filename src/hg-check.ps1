@@ -2,10 +2,151 @@
 # @file 				hg-check.ps1
 # @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.clablab.com)
 # @created			2013/12/09
-# @last-modified 	2014/04/07
+# @last-modified 	2014/04/15
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
 #	
+
+# Config variable for holding root folders we want to look for repos in
+$rootFolderPathA = @()
+$rootFolderPathA += "C:\Work\Projects"
+$rootFolderPathA += "C:\Work\Resources"
+
+# Scans for Mercurial repos, given a root folder to start from, and a maximum scan depth of sub-folders
+# to search in also. Uses recursion.
+function ScanForRepos($rootFolderString, $scanDepth, [ref]$repoPathA, [ref]$numberOfRepos)
+{
+	Write-Host "Root folder = $rootFolderString"
+	Write-Host "Scan depth = $scanDepth"
+	
+	# Check if scan depth is <=0, if so, user doesn't want to scan
+	# anything, so return 0
+	if($scanDepth -le 0)
+	{
+		return
+	}
+	
+	$fc = New-Object -com scripting.filesystemobject
+	$rootFolderObject = $fc.getfolder($rootFolderString)
+	
+	# Go up two levels, since this script is in it's own repo which has it's own folder and sub-folder
+	#$projectFolder = $scriptFolder.ParentFolder.ParentFolder
+	
+	# Count the number of repos (used for progress bar)
+	foreach ($subFolder in $rootFolderObject.subfolders) {
+		
+		if(CheckIfFolderIsRepoRoot $subFolder.path -eq $true)
+		{
+			$repoPathA.Value += $subFolder.path
+			$numberOfRepos.Value++
+		}
+		else
+		{
+			if($scanDepth -ne 1)
+			{
+				# Recursively call this function with the sub-folder path
+				ScanForRepos $subFolder.path ($scanDepth - 1) $repoPathA $numberOfRepos
+			}
+		}
+		$numFoldersChecked += 1
+		Write-Progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
+	}
+	
+}
+
+# Looks for a repo-ignore.txt file at the specified path. If found,
+# writes the lines of the text file (relative paths) to repoToIgnoreA, prefixing every entry
+# with the provided $path (so the entire path is now absolute)
+function GetRepoIgnore($path, [ref]$repoToIgnoreA)
+{
+	$repoIgnoreFilePath = $path + "\repo-ignore.txt"
+	Write-Host -NoNewLine "Attempting to read '$repoIgnoreFilePath'..."
+	$tempRepoToIgnoreA = @()
+	try
+	{
+		$tempRepoToIgnoreA = Get-Content $repoIgnoreFilePath -ea "stop"
+		Write-Host "repo-ignore.txt found."
+	}
+	catch
+	{
+		Write-Host "repo-ignore.txt not found."	
+		return
+	}
+	
+	Write-Host "Prefixing current path"
+	foreach($tempRepoToIgnore in $tempRepoToIgnoreA)
+	{
+		$repoToIgnoreA.Value += $path + "\" + $tempRepoToIgnore
+		Write-Host "PATH = $path\$tempRepoToIgnore"
+	}
+	
+}
+
+# Checks to see if there are tasks already scheduled.
+function IsTasksScheduled
+{
+	Write-Host "Checking if tasks are in scheduler..."
+	
+	$stdout = SchTasks /query /tn HgCheckTask1 2>&1
+	if($stdout -match 'ERROR: The system cannot find the file specified.')
+	{
+		return $false
+	}
+	
+	$stdout = SchTasks /query /tn HgCheckTask2 2>&1
+	if($stdout -match 'ERROR: The system cannot find the file specified.')
+	{
+		return $false
+	}
+
+	# None of the task queries returned and error, so both tasks
+	# must be present, return true.
+	return $true
+}
+
+# Schedules 2 tasks to run this script at different times during the day
+function ScheduleTasks($scriptPath)
+{
+	$scriptFilePath = $scriptPath + "\hg-check.ps1"
+
+	while($true)
+	{
+		$time1 = Read-Host 'Enter a time in the morning for the script to run (e.g. 09:00)'
+		$userString = [Environment]::UserDomainName + "\" + [Environment]::UserName
+		
+		# Attempt to create task, diverting error output to stdout so we can see if was successful
+		$stdout = Schtasks /create /tn "HgCheckTask1" /ru $userString /sc daily /st $time1 /F /tr "PowerShell -NoLogo -NoExit -NonInteractive -File '$scriptFilePath'" 2>&1
+		
+		if($stdout -match "ERROR")
+		{
+			Write-Host "ERROR: Time was not in the correct 24-hour 4-digit format XX:XX (e.g. 09:15)."
+		}
+		else
+		{
+			break
+		}	
+	}
+	
+	while($true)
+	{
+		$time2 = Read-Host 'Enter a time in the afternoon for the script to run (e.g. 17:00)'
+		$userString = [Environment]::UserDomainName + "\" + [Environment]::UserName
+		
+		$stdout = Schtasks /create /tn "HgCheckTask2" /ru $userString /sc daily /st $time2 /F /tr "PowerShell -NoLogo -NoExit -NonInteractive -File '$scriptFilePath'" 2>&1
+	
+		if($stdout -match "ERROR")
+		{
+			Write-Host "ERROR: Time was not in the correct 24-hour 4-digit format XX:XX (e.g. 09:15)."
+		}
+		else
+		{
+			break
+		}	
+	
+	}
+	
+	Write-Host "Tasks scheduled successfully."
+}
 
 function GetScriptDirectory
 {
@@ -48,10 +189,39 @@ function CheckIfFolderIsRepoRoot([string]$path)
 	
 }
 
+# The main function
 function Go() {
 
+	# Get the current script directory
 	$scriptPath = GetScriptDirectory
-
+	
+	$isTaksScheduled = IsTasksScheduled
+	
+	# Check whether tasks are scheduled
+	if($isTaksScheduled -eq $false)
+	{
+		Write-Host "Tasks not found in scheduler."
+		# Tasks are not present in scheduler
+		ScheduleTasks($scriptPath)
+	}
+	else
+	{
+		Write-Host "Tasks found in scheduler."
+		$timeout = new-timespan -Seconds 3
+		$sw = [diagnostics.stopwatch]::StartNew()
+		# Tasks are present in scheduler
+		"Press s in the next 3 seconds to re-configure scheduler tasks..."
+		while ($sw.elapsed -lt $timeout){
+			if ($Host.UI.RawUI.KeyAvailable -and ("s" -eq $Host.UI.RawUI.ReadKey("IncludeKeyUp,NoEcho").Character))
+			{
+				Write-Host "Key press detected, setting up tasks..."
+				# Schedule the tasks
+				ScheduleTasks($scriptPath)	
+				break;
+			}	
+		}
+	}
+	
 	$fc = New-Object -com scripting.filesystemobject
 	$scriptFolder = $fc.getfolder($scriptPath)
 	
@@ -67,6 +237,7 @@ function Go() {
 	$numberOfRepos = 0
 	
 	$repoPathA = @()
+	$repoToIgnoreA = @()
 	
 	$numFoldersChecked = 0
 	
@@ -90,6 +261,15 @@ function Go() {
 	# Keeps track of how many repos where pushed
 	$numReposPushed = 0
 	
+	Write-Host "Scanning for repos..."
+	
+	foreach ($rootFolderPath in $rootFolderPathA)
+	{
+		ScanForRepos $rootFolderPath 2 ([ref]$repoPathA) ([ref]$numberOfRepos)
+		GetRepoIgnore $rootFolderPath ([ref]$repoToIgnoreA)
+	}
+	
+	<#
 	# Count the number of repos (used for progress bar)
 	foreach ($subFolder in $projectFolder.subfolders) {
 		
@@ -111,8 +291,11 @@ function Go() {
 		}
 		$numFoldersChecked += 1
 		Write-Progress -activity "Searching for repos..." -status "Folders Checked = $numFoldersChecked" -percentcomplete $progress;
-	}
+	}#>
 	
+
+	
+	<#
 	$repoIgnoreFilePath = $projectFolder.path + "\repo-ignore.txt"
 	Write-Host -NoNewLine "Reading $repoIgnoreFilePath..."
 	try
@@ -123,7 +306,8 @@ function Go() {
 	catch
 	{
 		Write-Host "repo-ignore.txt not found."	
-	}
+	}#>
+	
 	
 	# Calculate the amount of progress that is done per single operation
 	$progressPerOperation = (100.0 - $progress) / $numberOfRepos / $numberOfSections
@@ -140,15 +324,19 @@ function Go() {
 		$shouldQuit = $false
 		$remoteRepoFound = $false
 		
-		# First check if we should ignore it
+		# First check if we should ignore it	
 		foreach ($repoToIgnore in $repoToIgnoreA)
 		{
-			#Write-Host "repoPath = $repoPath"
-			#Write-Host "repoToIgnore = $projectFolder.path + "\" + $repoToIgnore"
-			if($repoPath.Equals($projectFolder.path + "\" + $repoToIgnore))
+			#Write-Host "repoToIgnore = $repoToIgnore"
+			#Write-Host "repdoToIgnore = $projectFolder.path + "\" + $repoToIgnore"
+				
+			# See if this repo path equals any of the paths in 
+			# the array which holds paths to repos to ignore
+			if($repoPath.Equals($repoToIgnore))
 			{
 				$shouldQuit = $true;
 			}
+			
 		}
 		
 		if($shouldQuit -eq $true)
@@ -182,7 +370,7 @@ function Go() {
 		$a = hg incoming 2>&1
 		if($a -match [regex]::Escape("abort"))
 		{
-			$remoteRepoPathNotFoundWarnings += "Remote repo for $repoPath not found.`r`n"
+			$remoteRepoPathNotFoundWarnings += "$repoPath has an inaccessible remote repo path.`r`n"
 		}
 		elseif($a -match [regex]::Escape("no changes found"))
 		{
@@ -312,7 +500,6 @@ function Go() {
 	
 }
 
-"Checking for uncommitted/unpushed repo changes in 1s"
-Start-Sleep -s 1
+# Call main function
 Go
 ""

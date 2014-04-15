@@ -4,8 +4,8 @@ hg-check
 
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
-- Last Modified: 2014/04/04
-- Version: v2.4.0.0
+- Last Modified: 2014/04/15
+- Version: v2.5.0.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -64,6 +64,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.5.0.0 2014/04/15 PowerShell script now supports multiple root folders to begin searching for repos from, closes #27. Script now automatically registers two tasks in Windows Scheduler (schtasks.exe) to run itself, closes #26.
 v2.4.1.0 2014/04/07 'Remote repo not found' messages now print on new lines in PowerShell script, closes #25.
 v2.4.0.0 2014/04/04 PowerShell script now correctly detects new files that have been put into a repo, closes #21. PowerShell script now outputs warnings at the bottom of script for remote repos which where not found, closes #23. Added statistic for the number of repos with uncomitted changes, closes #24.
 v2.3.3.0 2014/04/04 Renamed $i to $repoPath, closes #11. Script no longer prints -1 and path just after it starts, closes #20. Added note to README about requirement that PowerShell has to be v3.0 or higher, closes #19.
