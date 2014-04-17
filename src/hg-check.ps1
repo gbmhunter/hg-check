@@ -2,7 +2,7 @@
 # @file 				hg-check.ps1
 # @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.clablab.com)
 # @created			2013/12/09
-# @last-modified 	2014/04/15
+# @last-modified 	2014/04/17
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
 #	
@@ -370,7 +370,7 @@ function Go() {
 		$a = hg incoming 2>&1
 		if($a -match [regex]::Escape("abort"))
 		{
-			$remoteRepoPathNotFoundWarnings += "$repoPath has an inaccessible remote repo path.`r`n"
+			$remoteRepoPathNotFoundWarnings += "$repoPath has an inaccessible remote repo path (or it is set up incorrectly in .hgrc, it must be under [path] and have the syntax 'default = url-to-remote-repo').`r`n"
 		}
 		elseif($a -match [regex]::Escape("no changes found"))
 		{
