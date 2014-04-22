@@ -2,7 +2,7 @@
 # @file 				hg-check.ps1
 # @author 			Geoffrey Hunter <gbmhunter@gmail.com> (www.clablab.com)
 # @created			2013/12/09
-# @last-modified 	2014/04/17
+# @last-modified 	2014/04/23
 # @brief 			Powershell script for keeping local hg repos in sync with remote copies.
 # @details
 #	
@@ -73,11 +73,11 @@ function GetRepoIgnore($path, [ref]$repoToIgnoreA)
 		return
 	}
 	
-	Write-Host "Prefixing current path"
+	# Write-Host "Prefixing current path"
 	foreach($tempRepoToIgnore in $tempRepoToIgnoreA)
 	{
 		$repoToIgnoreA.Value += $path + "\" + $tempRepoToIgnore
-		Write-Host "PATH = $path\$tempRepoToIgnore"
+		# Write-Host "PATH = $path\$tempRepoToIgnore"
 	}
 	
 }

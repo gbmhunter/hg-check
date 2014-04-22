@@ -4,8 +4,8 @@ hg-check
 
 - Author: gbmhunter <gbmhunter@gmail.com> (http://www.cladlab.com)
 - Created: 2013/12/09
-- Last Modified: 2014/04/17
-- Version: v2.5.1.0
+- Last Modified: 2014/04/23
+- Version: v2.5.2.0
 - Company: CladLabs
 - Project: Free Code Libraries	.
 - Language: Batch/PowerScript/Bash
@@ -64,6 +64,7 @@ Changelog
 ======== ========== ============================================================================================================
 Version  Date       Comment
 ======== ========== ============================================================================================================
+v2.5.2.0 2014/04/23 Stopped 'PATH = ...' and other debug messages from printing, closes #29.
 v2.5.1.0 2014/04/17 Add info to '<repo name> has an inaccessible remote repo path' error that it could be due to the path syntax being wrong in .hgrc, closes #28.
 v2.5.0.0 2014/04/15 PowerShell script now supports multiple root folders to begin searching for repos from, closes #27. Script now automatically registers two tasks in Windows Scheduler (schtasks.exe) to run itself, closes #26.
 v2.4.1.0 2014/04/07 'Remote repo not found' messages now print on new lines in PowerShell script, closes #25.
